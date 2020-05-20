@@ -7,15 +7,16 @@ import os
 import xml.dom.minidom as minidom
 import json
 import sys
+import random
 from datasets import util
+from datasets.detection import data_description
 
 class GenerateTfrecord():
-    def __init__(self,dataset_dir,tfrecord_dir,split_name,dataset):
+    def __init__(self,dataset_dir,tfrecord_dir,dataset):
         self.dataset_dir = dataset_dir
         self.img_datas = []
         self.label_map = {} #{"background":0}
         self.tfrecord_dir = tfrecord_dir
-        self.split_name = split_name
         self.dataset = dataset
         self.get_label_id()
     
@@ -28,12 +29,7 @@ class GenerateTfrecord():
         ......
         """
         label_map_file = os.path.join(self.dataset_dir,"label_map.txt")
-        with open(label_map_file,"r") as f:
-            lines = f.readlines()
-            for line in lines:
-                line = line.replace("\n","")
-                line = json.loads(line)
-                self.label_map[line["label"]] = int(line["id"])
+        self.label_map = util.load_label_map(label_map_file)
 
     def prepare_datas(self):
         if not os.path.exists(self.dataset_dir):
@@ -62,7 +58,6 @@ class GenerateTfrecord():
         img_data = tf.gfile.FastGFile(imgfile,"rb").read()
         imginfo["img_data"]=img_data
         return imginfo
-
 
     def parse_xml(self,xmlfile):
         # print(xmlfile)
@@ -117,6 +112,7 @@ class GenerateTfrecord():
             "image/height":util.int64_feature(shape[0]),
             "image/width":util.int64_feature(shape[1]),
             "image/channel":util.int64_feature(shape[2]),
+            "image/shape":util.int64_list_feature(shape),
             "image/object/bbox/xmin":util.float_list_feature(xmin),
             "image/object/bbox/ymin":util.float_list_feature(ymin),
             "image/object/bbox/xmax":util.float_list_feature(xmax),
@@ -128,20 +124,7 @@ class GenerateTfrecord():
         }))
         return example
     
-    def generate_tfrecord(self):
-        # imginfos = self.prepare_data()
-        if not os.path.exists(self.tfrecord_dir):
-            os.makedirs(self.tfrecord_dir)
-        tf_filename = os.path.join(self.tfrecord_dir,self.dataset+"_"+self.split_name+".tfrecord")
-
-        img_path = os.path.join(self.dataset_dir,"JPEGImages")
-        if not os.path.exists(img_path):
-            print("Error not find %s"%(img_path))
-        xml_path = os.path.join(self.dataset_dir,"Annotations")
-        if not os.path.exists(xml_path):
-            print("Error not find %s"%(xml_path))
-        img_list = os.listdir(img_path)
-
+    def add_tfrecord(self,tf_filename,img_list,img_path,xml_path):
         with tf.python_io.TFRecordWriter(tf_filename) as tfrecord_writer:
             i = 0
             for img in img_list:
@@ -153,6 +136,32 @@ class GenerateTfrecord():
                 sys.stdout.flush()  # 缓冲
                 tfrecord_writer.write(example.SerializeToString())
                 i+=1
+
+    def generate_tfrecord(self):
+        # imginfos = self.prepare_data()
+        if not os.path.exists(self.tfrecord_dir):
+            os.makedirs(self.tfrecord_dir)
+        
+        img_path = os.path.join(self.dataset_dir,"JPEGImages")
+        if not os.path.exists(img_path):
+            print("Error not find %s"%(img_path))
+        xml_path = os.path.join(self.dataset_dir,"Annotations")
+        if not os.path.exists(xml_path):
+            print("Error not find %s"%(xml_path))
+        img_list = os.listdir(img_path)
+        random.shuffle(img_list)
+
+        if self.dataset in data_description._DATASETS_INFORMATION:
+            splits_to_sizes = data_description._DATASETS_INFORMATION[self.dataset].splits_to_sizes
+            start_index = 0
+            for key in splits_to_sizes:
+                tf_filename = os.path.join(self.tfrecord_dir,self.dataset+"_"+key+".tfrecord")
+                imgfilelen = splits_to_sizes[key]
+                key_img_list = img_list[start_index:imgfilelen]
+                start_index = imgfilelen
+                self.add_tfrecord(tf_filename,key_img_list,img_path,xml_path)
+
+                
 
 
 

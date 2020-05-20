@@ -1,4 +1,5 @@
 import tensorflow as tf
+import json
 
 def int64_feature(value):
         """
@@ -26,3 +27,27 @@ def bytes_feature(value):
 
 def bytes_list_feature(value):
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=value))
+
+def load_label_map(label_map_file):
+    """
+    label_map.txt:
+    {"id":0,"label":"background"}
+    ......
+    """
+    label_map = {}
+    with open(label_map_file,"r") as f:
+        lines = f.readlines()
+        for line in lines:
+            line = line.replace("\n","")
+            line = json.loads(line)
+            label_map[line["label"]] = int(line["id"])
+    return label_map
+def label_to_class_name(label_map_file):
+    label_map = {}
+    with open(label_map_file,"r") as f:
+        lines = f.readlines()
+        for line in lines:
+            line = line.replace("\n","")
+            line = json.loads(line)
+            label_map[int(line["id"])] = line["label"]
+    return label_map

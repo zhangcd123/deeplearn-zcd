@@ -12,9 +12,8 @@ class GenerateTfrecordTest(unittest.TestCase):
         """
         dataset_dir = "datasets/pascal_voc_seg/VOCdevkit/VOC2012"
         tfrecord_dir = "datasets/pascal_voc_seg/tfrecord"
-        split_name = "train"
-        dataset = "voc_2012"
-        self.gt = GenerateTfrecord(dataset_dir,tfrecord_dir,split_name,dataset)
+        dataset = "pascal_voc_2012"
+        self.gt = GenerateTfrecord(dataset_dir,tfrecord_dir,dataset)
         print(self.gt.label_map)
         
 
@@ -26,7 +25,6 @@ class GenerateTfrecordTest(unittest.TestCase):
 
     def test_get_label_id(self):
         self.gt.get_label_id()
-        print(self.gt.label_map)
 
     def test_prepare_data(self):
         self.gt.prepare_data()
