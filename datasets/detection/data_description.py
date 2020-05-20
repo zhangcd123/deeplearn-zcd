@@ -1,3 +1,7 @@
+"""
+Description:dataset information
+Author:cara-zhang
+"""
 import collections
 
 # Named tuple to describe the dataset properties.
